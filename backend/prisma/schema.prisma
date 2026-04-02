@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ────────────────────────────────────────────────────────────
+// Enums
+// ────────────────────────────────────────────────────────────
+
+enum Role {
+  ACOLYTE
+  GUARDIAN
+  COORDINATOR
+  ADMIN
+
+  @@map("role")
+}
+
+enum CelebrationType {
+  SUNDAY_MASS
+  WEEKDAY_MASS
+  HOLY_DAY
+  SPECIAL
+
+  @@map("celebration_type")
+}
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("schedule_status")
+}
+
+enum Period {
+  ALL_DAY
+  MORNING_ONLY
+  NIGHT_ONLY
+
+  @@map("period")
+}
+
+enum LiturgicalColor {
+  GREEN
+  WHITE
+  RED
+  PURPLE
+  ROSE
+  BLACK
+
+  @@map("liturgical_color")
+}
+
+// ────────────────────────────────────────────────────────────
+// 1. User
+// ────────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(ACOLYTE)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  guardianLinks       GuardianLink[]       @relation("Guardian")
+  acolyteLinks        GuardianLink[]       @relation("Acolyte")
+  userFunctions       UserFunction[]
+  unavailabilities    Unavailability[]
+  createdSchedules    Schedule[]           @relation("ScheduleCreator")
+  scheduleAssignments ScheduleAssignment[]
+  serviceRecords      ServiceRecord[]
+  auditLogs           ScheduleAuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([active])
+  @@map("users")
+}
+
+// ────────────────────────────────────────────────────────────
+// 2. GuardianLink
+// ────────────────────────────────────────────────────────────
+
+model GuardianLink {
+  id         Int      @id @default(autoincrement())
+  guardianId Int      @map("guardian_id")
+  acolyteId  Int      @map("acolyte_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  guardian User @relation("Guardian", fields: [guardianId], references: [id], onDelete: Cascade)
+  acolyte  User @relation("Acolyte", fields: [acolyteId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianId, acolyteId])
+  @@index([guardianId])
+  @@index([acolyteId])
+  @@map("guardian_links")
+}
+
+// ────────────────────────────────────────────────────────────
+// 3. LiturgicalFunction
+// ────────────────────────────────────────────────────────────
+
+model LiturgicalFunction {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  description  String?
+  active       Boolean  @default(true)
+  displayOrder Int      @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  userFunctions                  UserFunction[]
+  celebrationFunctionRequirements CelebrationFunctionRequirement[]
+  scheduleAssignments            ScheduleAssignment[]
+  serviceRecords                 ServiceRecord[]
+
+  @@index([active])
+  @@index([displayOrder])
+  @@map("liturgical_functions")
+}
+
+// ────────────────────────────────────────────────────────────
+// 4. UserFunction
+// ────────────────────────────────────────────────────────────
+
+model UserFunction {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  functionId Int      @map("function_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  function LiturgicalFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, functionId])
+  @@index([userId])
+  @@index([functionId])
+  @@map("user_functions")
+}
+
+// ────────────────────────────────────────────────────────────
+// 5. Unavailability
+// ────────────────────────────────────────────────────────────
+
+model Unavailability {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  date      DateTime @db.Date
+  period    Period   @default(ALL_DAY)
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("unavailabilities")
+}
+
+// ────────────────────────────────────────────────────────────
+// 6. Celebration
+// ────────────────────────────────────────────────────────────
+
+model Celebration {
+  id              Int               @id @default(autoincrement())
+  name            String
+  date            DateTime
+  type            CelebrationType   @default(SUNDAY_MASS)
+  liturgicalColor LiturgicalColor?  @map("liturgical_color")
+  location        String?
+  notes           String?
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  functionRequirements CelebrationFunctionRequirement[]
+  scheduleAssignments  ScheduleAssignment[]
+  serviceRecords       ServiceRecord[]
+
+  @@index([date])
+  @@index([type])
+  @@index([active])
+  @@map("celebrations")
+}
+
+// ────────────────────────────────────────────────────────────
+// 7. CelebrationFunctionRequirement
+// ────────────────────────────────────────────────────────────
+
+model CelebrationFunctionRequirement {
+  id            Int @id @default(autoincrement())
+  celebrationId Int @map("celebration_id")
+  functionId    Int @map("function_id")
+  quantity      Int @default(1)
+
+  celebration Celebration        @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+  function    LiturgicalFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([celebrationId, functionId])
+  @@index([celebrationId])
+  @@index([functionId])
+  @@map("celebration_function_requirements")
+}
+
+// ────────────────────────────────────────────────────────────
+// 8. Schedule
+// ────────────────────────────────────────────────────────────
+
+model Schedule {
+  id          Int            @id @default(autoincrement())
+  name        String
+  startDate   DateTime       @map("start_date") @db.Date
+  endDate     DateTime       @map("end_date") @db.Date
+  status      ScheduleStatus @default(DRAFT)
+  publicToken String?        @unique @map("public_token")
+  generatedAt DateTime       @default(now()) @map("generated_at")
+  publishedAt DateTime?      @map("published_at")
+  createdById Int            @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  createdBy      User                 @relation("ScheduleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignments    ScheduleAssignment[]
+  auditLogs      ScheduleAuditLog[]
+  serviceRecords ServiceRecord[]
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([publicToken])
+  @@index([createdById])
+  @@map("schedules")
+}
+
+// ────────────────────────────────────────────────────────────
+// 9. ScheduleAssignment
+// ────────────────────────────────────────────────────────────
+
+model ScheduleAssignment {
+  id            Int      @id @default(autoincrement())
+  scheduleId    Int      @map("schedule_id")
+  celebrationId Int      @map("celebration_id")
+  functionId    Int      @map("function_id")
+  userId        Int?     @map("user_id")
+  locked        Boolean  @default(false)
+  score         Float?
+  auditData     Json?    @map("audit_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  schedule    Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  celebration Celebration        @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+  function    LiturgicalFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleId, celebrationId, functionId, userId])
+  @@index([scheduleId])
+  @@index([celebrationId])
+  @@index([functionId])
+  @@index([userId])
+  @@map("schedule_assignments")
+}
+
+// ────────────────────────────────────────────────────────────
+// 10. ServiceRecord
+// ────────────────────────────────────────────────────────────
+
+model ServiceRecord {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  celebrationId Int      @map("celebration_id")
+  functionId    Int      @map("function_id")
+  scheduleId    Int      @map("schedule_id")
+  servedAt      DateTime @map("served_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  celebration Celebration        @relation(fields: [celebrationId], references: [id], onDelete: Cascade)
+  function    LiturgicalFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  schedule    Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([celebrationId])
+  @@index([servedAt])
+  @@index([scheduleId])
+  @@map("service_records")
+}
+
+// ────────────────────────────────────────────────────────────
+// 11. ScheduleAuditLog
+// ────────────────────────────────────────────────────────────
+
+model ScheduleAuditLog {
+  id            Int      @id @default(autoincrement())
+  scheduleId    Int      @map("schedule_id")
+  action        String
+  performedById Int      @map("performed_by_id")
+  details       Json
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  performedBy User     @relation(fields: [performedById], references: [id], onDelete: Restrict)
+
+  @@index([scheduleId])
+  @@index([performedById])
+  @@index([action])
+  @@index([createdAt])
+  @@map("schedule_audit_logs")
+}
