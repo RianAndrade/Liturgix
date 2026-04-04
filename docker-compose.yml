@@ -1,0 +1,92 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: liturgix-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-liturgix}:${POSTGRES_PASSWORD:-liturgix}@db:5432/${POSTGRES_DB:-liturgix}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - app_uploads:/app/uploads
+    networks:
+      - liturgix-net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: liturgix-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-liturgix}:${POSTGRES_PASSWORD:-liturgix}@db:5432/${POSTGRES_DB:-liturgix}
+      REDIS_URL: redis://redis:6379/0
+    command: ["node", "dist/worker.js"]
+    networks:
+      - liturgix-net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: liturgix-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-liturgix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-liturgix}
+      POSTGRES_DB: ${POSTGRES_DB:-liturgix}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - liturgix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liturgix}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: liturgix-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - liturgix-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  liturgix-net:
+    driver: bridge
