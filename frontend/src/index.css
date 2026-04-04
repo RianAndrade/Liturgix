@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap");
+
+@theme {
+  /* Light mode (default) */
+  --color-background: #f3ece0;
+  --color-foreground: #2d1f14;
+  --color-card: #ede6d8;
+  --color-card-foreground: #2d1f14;
+  --color-card-inner: #f3ece0;
+  --color-muted: #ede6d8;
+  --color-muted-foreground: #9a8568;
+  --color-muted-strong: #7a5c3a;
+  --color-primary: #7a2e1a;
+  --color-primary-foreground: #f3ece0;
+  --color-primary-light: #a0413c;
+  --color-accent: #c99560;
+  --color-accent-foreground: #2d1f14;
+  --color-gold: #b8944e;
+  --color-destructive: #a0413c;
+  --color-destructive-foreground: #f3ece0;
+  --color-success: #2a7a6f;
+  --color-success-light: #35958a;
+  --color-success-foreground: #f3ece0;
+  --color-border: #d9cfbb;
+  --color-ring: #c99560;
+
+  /* Sidebar (same in both modes) */
+  --color-sidebar: #2d1f14;
+  --color-sidebar-dark: #3d2b1f;
+  --color-sidebar-text: #b0a08a;
+  --color-sidebar-text-active: #f0e6d8;
+  --color-sidebar-accent: #c99560;
+  --color-sidebar-separator: rgba(255, 255, 255, 0.03);
+
+  /* Login (always dark) */
+  --color-login-bg: #2d1f14;
+  --color-login-bg-dark: #3d2b1f;
+  --color-login-card: #4a3628;
+  --color-login-card-border: #5a4636;
+  --color-login-input: #3d2b1f;
+  --color-login-text: #b0a08a;
+  --color-login-label: #c99560;
+
+  /* Muted button */
+  --color-muted-btn: #d9cfbb;
+  --color-muted-btn-foreground: #7a5c3a;
+
+  --font-serif: "Crimson Pro", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+.dark {
+  --color-background: #1a1210;
+  --color-foreground: #f0e6d8;
+  --color-card: #2d1f14;
+  --color-card-foreground: #f0e6d8;
+  --color-card-inner: #1a1210;
+  --color-muted: #2d1f14;
+  --color-muted-foreground: #7a5c3a;
+  --color-muted-strong: #9a8568;
+  --color-border: #3d2b1f;
+  --color-ring: #c99560;
+  --color-muted-btn: #3d2b1f;
+  --color-muted-btn-foreground: #9a8568;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}
