@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/shared/lib/api";
+import { PageLoading } from "@/shared/components/ui/Spinner";
+import { PageError } from "@/shared/components/ui/PageError";
 
 interface Stats {
   users: Record<string, number>;
@@ -14,13 +16,20 @@ const ROLE_COLOR: Record<string, string> = { ACOLYTE: "#8b1a1a", GUARDIAN: "#a67
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    api<{ data: Stats }>("/admin/stats").then((r) => { setStats(r.data); setLoading(false); });
-  }, []);
+  const fetch_ = () => {
+    setLoading(true);
+    setError(false);
+    api<{ data: Stats }>("/admin/stats")
+      .then((r) => { setStats(r.data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
 
-  if (loading) return <p className="text-muted-foreground">Carregando...</p>;
-  if (!stats) return null;
+  useEffect(() => { fetch_(); }, []);
+
+  if (loading) return <PageLoading />;
+  if (error || !stats) return <PageError onRetry={fetch_} />;
 
   return (
     <div>
@@ -54,6 +63,14 @@ export default function AdminPage() {
           <div className="font-medium">Funções Litúrgicas</div>
           <div className="text-xs text-muted-foreground">Criar, editar e desativar funções</div>
         </Link>
+        <Link to="/admin/usuarios" className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer">
+          <div className="font-medium">Usuários</div>
+          <div className="text-xs text-muted-foreground">Gerenciar papéis e status de usuários</div>
+        </Link>
+        <Link to="/admin/auditoria" className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer">
+          <div className="font-medium">Auditoria</div>
+          <div className="text-xs text-muted-foreground">Histórico de ações no sistema</div>
+        </Link>
         <Link to="/acolitos" className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer">
           <div className="font-medium">Acólitos</div>
           <div className="text-xs text-muted-foreground">Gerenciar acólitos e qualificações</div>
@@ -61,6 +78,10 @@ export default function AdminPage() {
         <Link to="/celebracoes" className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer">
           <div className="font-medium">Celebrações</div>
           <div className="text-xs text-muted-foreground">Gerenciar celebrações e requisitos</div>
+        </Link>
+        <Link to="/responsaveis" className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer">
+          <div className="font-medium">Responsáveis</div>
+          <div className="text-xs text-muted-foreground">Vínculos guardiões e acólitos</div>
         </Link>
       </div>
     </div>

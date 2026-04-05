@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyCors from "@fastify/cors";
+import fastifyCookie from "@fastify/cookie";
+import fastifyRateLimit from "@fastify/rate-limit";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +14,7 @@ import serverRoutes from "./modules/server/server.routes.js";
 import availabilityRoutes from "./modules/availability/availability.routes.js";
 import celebrationRoutes from "./modules/celebration/celebration.routes.js";
 import scheduleRoutes from "./modules/schedule/schedule.routes.js";
+import guardianRoutes from "./modules/guardian/guardian.routes.js";
 import publicRoutes from "./modules/public/public.routes.js";
 import { redis } from "./shared/lib/redis.js";
 
@@ -22,7 +25,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = Fastify({ logger: true });
 
 // Plugins
-await app.register(fastifyCors, { origin: true });
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",")
+  : ["http://localhost:5173", "http://localhost:3000"];
+await app.register(fastifyCors, { origin: allowedOrigins, credentials: true });
+await app.register(fastifyCookie);
+await app.register(fastifyRateLimit, { max: 100, timeWindow: "1 minute" });
 await app.register(prismaPlugin);
 await app.register(authPlugin);
 
@@ -52,6 +60,7 @@ await app.register(serverRoutes);
 await app.register(availabilityRoutes);
 await app.register(celebrationRoutes);
 await app.register(scheduleRoutes);
+await app.register(guardianRoutes);
 await app.register(publicRoutes);
 
 // SPA fallback

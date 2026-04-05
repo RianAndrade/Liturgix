@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/shared/lib/api";
 import { useAuth, hasMinRole } from "@/features/auth/auth";
+import { PageLoading } from "@/shared/components/ui/Spinner";
+import { PageError } from "@/shared/components/ui/PageError";
 
 interface Schedule {
   id: number;
@@ -29,14 +31,23 @@ const STATUS_BORDER: Record<string, string> = {
 
 export default function EscalasPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    api<{ data: Schedule[] }>("/schedules").then((r) => { setSchedules(r.data); setLoading(false); });
-  }, []);
+  const fetch_ = () => {
+    setLoading(true);
+    setError(false);
+    api<{ data: Schedule[] }>("/schedules")
+      .then((r) => { setSchedules(r.data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
 
-  if (loading) return <p className="text-muted-foreground">Carregando...</p>;
+  useEffect(() => { fetch_(); }, []);
+
+  if (loading) return <PageLoading />;
+  if (error) return <PageError onRetry={fetch_} />;
 
   return (
     <div>
@@ -65,7 +76,8 @@ export default function EscalasPage() {
           {schedules.map((s) => (
             <div
               key={s.id}
-              className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors"
+              onClick={() => navigate(`/escala/${s.id}`)}
+              className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors cursor-pointer"
               style={{ borderLeft: `3px solid ${STATUS_BORDER[s.status] ?? "#9a8568"}` }}
             >
               <div className="flex items-center justify-between">
@@ -83,9 +95,7 @@ export default function EscalasPage() {
                     <span>{s.assignmentCount} atribuição(ões)</span>
                   </div>
                 </div>
-                <Link to={`/escala/${s.id}`} className="text-sm text-primary hover:underline">
-                  Ver
-                </Link>
+                <span className="text-xs text-muted-foreground">Ver &rarr;</span>
               </div>
             </div>
           ))}

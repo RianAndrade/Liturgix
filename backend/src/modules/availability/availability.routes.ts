@@ -19,8 +19,22 @@ export default async function availabilityRoutes(app: FastifyInstance) {
   // GET /api/servers/:id/availability?startDate=&endDate=
   app.get<{ Params: { id: string }; Querystring: { startDate?: string; endDate?: string } }>(
     "/api/servers/:id/availability",
-    async (request) => {
+    async (request, reply) => {
       const id = Number(request.params.id);
+      const user = request.user;
+
+      // ACOLYTE can only view own availability
+      if (user.role === "ACOLYTE" && user.sub !== id) {
+        return reply.code(403).send({ statusCode: 403, error: "Forbidden", message: "Permissão insuficiente" });
+      }
+      // GUARDIAN can only view linked acolytes
+      if (user.role === "GUARDIAN") {
+        const link = await app.prisma.guardianLink.findFirst({
+          where: { guardianId: user.sub, acolyteId: id },
+        });
+        if (!link) return reply.code(403).send({ statusCode: 403, error: "Forbidden", message: "Acólito não vinculado" });
+      }
+
       const where: any = { userId: id };
 
       if (request.query.startDate && request.query.endDate) {

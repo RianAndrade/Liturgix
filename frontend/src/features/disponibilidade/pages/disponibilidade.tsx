@@ -4,6 +4,7 @@ import { useAuth } from "@/features/auth/auth";
 import type { Period } from "@/shared/types";
 import { getFunctionColor } from "@/shared/lib/function-colors";
 import { ChevronLeft, ChevronRight, Calendar, Bookmark, Save, Check } from "lucide-react";
+import { useToast } from "@/shared/components/ui/Toast";
 
 interface LiturgicalFn {
   id: number;
@@ -13,6 +14,7 @@ interface LiturgicalFn {
 
 export default function DisponibilidadePage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
   const [unavailDates, setUnavailDates] = useState<Map<string, Period>>(new Map());
@@ -82,25 +84,30 @@ export default function DisponibilidadePage() {
     if (!user) return;
     setSaving(true);
     setSavingFns(true);
-    await Promise.all([
-      api(`/servers/${user.id}/availability`, {
-        method: "PUT",
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          dates: Array.from(unavailDates.entries()).map(([date, period]) => ({ date, period })),
+    try {
+      await Promise.all([
+        api(`/servers/${user.id}/availability`, {
+          method: "PUT",
+          body: JSON.stringify({
+            startDate,
+            endDate,
+            dates: Array.from(unavailDates.entries()).map(([date, period]) => ({ date, period })),
+          }),
         }),
-      }),
-      api(`/servers/${user.id}/functions`, {
-        method: "PUT",
-        body: JSON.stringify({ functionIds: Array.from(selectedFnIds) }),
-      }),
-    ]);
-    setSavedUnavailDates(new Map(unavailDates));
-    setSavedFnIds(new Set(selectedFnIds));
+        api(`/servers/${user.id}/functions`, {
+          method: "PUT",
+          body: JSON.stringify({ functionIds: Array.from(selectedFnIds) }),
+        }),
+      ]);
+      setSavedUnavailDates(new Map(unavailDates));
+      setSavedFnIds(new Set(selectedFnIds));
+      toast("Alterações salvas");
+    } catch {
+      toast("Erro ao salvar alterações", "error");
+    }
     setSaving(false);
     setSavingFns(false);
-  }, [user, startDate, endDate, unavailDates, selectedFnIds]);
+  }, [user, startDate, endDate, unavailDates, selectedFnIds, toast]);
 
   const changeMonth = (delta: number) => {
     let m = month + delta;

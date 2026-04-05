@@ -6,7 +6,7 @@ export async function authGuard(request: FastifyRequest, reply: FastifyReply) {
     await request.jwtVerify();
 
     // Check JWT blacklist (logout)
-    const token = request.headers.authorization?.replace("Bearer ", "");
+    const token = request.cookies.token;
     if (token) {
       const blacklisted = await redis.get(`bl:${token}`);
       if (blacklisted) {

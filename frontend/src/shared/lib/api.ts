@@ -2,24 +2,28 @@ const BASE_URL = "/api";
 
 export async function api<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { skipAuthRedirect?: boolean } = {},
 ): Promise<T> {
-  const token = localStorage.getItem("token");
+  const { skipAuthRedirect, ...fetchOptions } = options;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) ?? {}),
+    ...((fetchOptions.headers as Record<string, string>) ?? {}),
   };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (fetchOptions.body) headers["Content-Type"] = "application/json";
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...fetchOptions,
+    headers,
+    credentials: "include",
+  });
 
-  if (res.status === 401) {
-    localStorage.removeItem("token");
+  if (res.status === 401 && !skipAuthRedirect) {
     window.location.href = "/login";
     throw new Error("Unauthorized");
   }
 
   const data = await res.json();
-  if (!res.ok) throw data;
+  if (!res.ok) {
+    throw { statusCode: res.status, message: data?.message ?? "Erro inesperado" };
+  }
   return data;
 }

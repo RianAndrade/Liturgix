@@ -76,7 +76,7 @@ export default async function celebrationRoutes(app: FastifyInstance) {
   app.post("/api/celebrations", { preHandler: [minRole("COORDINATOR")] }, async (request, reply) => {
     const parsed = celebrationSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ statusCode: 400, error: "Validation Error", message: "Dados inválidos", details: parsed.error.flatten().fieldErrors });
+      return reply.code(400).send({ statusCode: 400, error: "Validation Error", message: "Dados inválidos" });
     }
     const date = new Date(parsed.data.date);
     let { liturgicalColor } = parsed.data;

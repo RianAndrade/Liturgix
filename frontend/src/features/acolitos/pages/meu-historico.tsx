@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { api } from "@/shared/lib/api";
 import { useAuth } from "@/features/auth/auth";
 import { getFunctionColor } from "@/shared/lib/function-colors";
+import { PageLoading } from "@/shared/components/ui/Spinner";
+import { PageError } from "@/shared/components/ui/PageError";
 
-interface Record {
+interface HistoryRecord {
   id: number;
   servedAt: string;
   celebration: { id: number; name: string };
@@ -12,20 +14,24 @@ interface Record {
 
 export default function MeuHistoricoPage() {
   const { user } = useAuth();
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
+  const fetch_ = () => {
     if (!user) return;
-    api<{ data: Record[]; pagination: { total: number } }>(`/servers/${user.id}/history`).then((r) => {
-      setRecords(r.data);
-      setTotal(r.pagination.total);
-      setLoading(false);
-    });
-  }, [user]);
+    setLoading(true);
+    setError(false);
+    api<{ data: HistoryRecord[]; pagination: { total: number } }>(`/servers/${user.id}/history`)
+      .then((r) => { setRecords(r.data); setTotal(r.pagination.total); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
 
-  if (loading) return <p className="text-muted-foreground">Carregando...</p>;
+  useEffect(() => { fetch_(); }, [user]);
+
+  if (loading) return <PageLoading />;
+  if (error) return <PageError onRetry={fetch_} />;
 
   return (
     <div>
@@ -44,7 +50,7 @@ export default function MeuHistoricoPage() {
           {records.map((r) => (
             <div
               key={r.id}
-              className="rounded-lg bg-card p-4 border border-border hover:border-accent/40 transition-colors"
+              className="rounded-lg bg-card p-4 border border-border"
               style={{ borderLeft: `3px solid ${getFunctionColor(r.function.name)}` }}
             >
               <div className="flex items-center justify-between">

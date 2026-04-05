@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/shared/lib/api";
+import { Spinner } from "@/shared/components/ui/Spinner";
 
 export default function EscalaNovaPage() {
   const navigate = useNavigate();
@@ -14,6 +15,12 @@ export default function EscalaNovaPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (startDate && endDate && startDate > endDate) {
+      setError("A data de início deve ser anterior à data de fim.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await api<{ data: { scheduleId: number } }>("/schedules/generate", {
@@ -21,7 +28,6 @@ export default function EscalaNovaPage() {
         body: JSON.stringify({ name, startDate, endDate }),
       });
       setGenerating(true);
-      // Poll for completion
       const scheduleId = res.data.scheduleId;
       const poll = setInterval(async () => {
         try {
@@ -32,7 +38,6 @@ export default function EscalaNovaPage() {
           }
         } catch { /* keep polling */ }
       }, 1000);
-      // Timeout after 30s
       setTimeout(() => { clearInterval(poll); navigate(`/escala/${scheduleId}`); }, 30000);
     } catch (err: any) {
       setError(err?.message || "Erro ao gerar escala");
@@ -46,7 +51,8 @@ export default function EscalaNovaPage() {
 
       {generating ? (
         <div className="rounded-md border border-border bg-card p-8 text-center">
-          <div className="mb-3 text-lg font-medium">Gerando escala...</div>
+          <Spinner size={28} className="mx-auto mb-3 text-accent" />
+          <div className="mb-1 text-lg font-medium">Gerando escala...</div>
           <p className="text-sm text-muted-foreground">O algoritmo está distribuindo os acólitos. Aguarde.</p>
         </div>
       ) : (
@@ -82,6 +88,7 @@ export default function EscalaNovaPage() {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 required
+                min={startDate || undefined}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -90,8 +97,9 @@ export default function EscalaNovaPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {loading && <Spinner size={14} />}
             Gerar Escala
           </button>
         </form>

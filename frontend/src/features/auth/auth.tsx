@@ -18,10 +18,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchMe = useCallback(async () => {
     try {
-      const res = await api<MeResponse>("/auth/me");
+      const res = await api<MeResponse>("/auth/me", { skipAuthRedirect: true });
       setUser(res.data);
     } catch {
-      localStorage.removeItem("token");
       setUser(null);
     } finally {
       setLoading(false);
@@ -29,19 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (localStorage.getItem("token")) {
-      fetchMe();
-    } else {
-      setLoading(false);
-    }
+    fetchMe();
   }, [fetchMe]);
 
   const login = async (email: string, password: string) => {
     const res = await api<AuthResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+      skipAuthRedirect: true,
     });
-    localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
   };
 
@@ -49,8 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ name, email, password, role }),
+      skipAuthRedirect: true,
     });
-    localStorage.setItem("token", res.data.token);
     setUser(res.data.user);
   };
 
@@ -58,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api("/auth/logout", { method: "POST" });
     } finally {
-      localStorage.removeItem("token");
       setUser(null);
     }
   };

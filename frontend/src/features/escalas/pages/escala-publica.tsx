@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { PageLoading } from "@/shared/components/ui/Spinner";
 
 interface PublicSchedule {
   name: string;
@@ -17,26 +18,31 @@ export default function EscalaPublicaPage() {
   const [schedule, setSchedule] = useState<PublicSchedule | null>(null);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetch_ = () => {
+    setError(false);
     fetch(`/api/public/schedules/${token}`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setSchedule(d.data); else setError(true); })
       .catch(() => setError(true));
-  }, [token]);
+  };
+
+  useEffect(() => { fetch_(); }, [token]);
 
   if (error) return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3">
       <p className="text-muted-foreground">Escala não encontrada.</p>
+      <button onClick={fetch_} className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted">
+        Tentar novamente
+      </button>
     </div>
   );
 
   if (!schedule) return (
     <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">Carregando...</p>
+      <PageLoading />
     </div>
   );
 
-  // Group by celebration
   const byCell = new Map<number, { celebration: PublicSchedule["assignments"][0]["celebration"]; items: PublicSchedule["assignments"] }>();
   for (const a of schedule.assignments) {
     if (!byCell.has(a.celebration.id)) byCell.set(a.celebration.id, { celebration: a.celebration, items: [] });
@@ -50,6 +56,12 @@ export default function EscalaPublicaPage() {
       <p className="mb-6 text-center text-sm text-muted-foreground">
         {new Date(schedule.startDate).toLocaleDateString("pt-BR")} — {new Date(schedule.endDate).toLocaleDateString("pt-BR")}
       </p>
+
+      {schedule.assignments.length === 0 && (
+        <div className="rounded-lg bg-card p-6 border border-border text-center">
+          <p className="text-sm text-muted-foreground">Esta escala ainda não possui atribuições.</p>
+        </div>
+      )}
 
       {[...byCell.values()].map(({ celebration, items }) => (
         <div key={celebration.id} className="mb-4 rounded-md border border-border bg-card">

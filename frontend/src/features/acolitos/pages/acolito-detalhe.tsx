@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "@/shared/lib/api";
 import { useAuth, hasMinRole } from "@/features/auth/auth";
+import { PageLoading } from "@/shared/components/ui/Spinner";
+import { PageError } from "@/shared/components/ui/PageError";
+import { Spinner } from "@/shared/components/ui/Spinner";
+import { useToast } from "@/shared/components/ui/Toast";
 
 interface ServerDetail {
   id: number;
@@ -21,40 +25,56 @@ interface LiturgicalFn {
 export default function AcolitoDetalhePage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [allFunctions, setAllFunctions] = useState<LiturgicalFn[]>([]);
   const [selectedFnIds, setSelectedFnIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const isCoord = user && hasMinRole(user.role, "COORDINATOR");
 
-  useEffect(() => {
+  const fetch_ = () => {
+    setError(false);
+    setLoading(true);
     Promise.all([
       api<{ data: ServerDetail }>(`/servers/${id}`),
       isCoord ? api<{ data: LiturgicalFn[] }>("/admin/functions") : Promise.resolve({ data: [] }),
-    ]).then(([s, f]) => {
-      setServer(s.data);
-      setSelectedFnIds(s.data.functions.map((fn) => fn.id));
-      setAllFunctions(f.data.filter((fn: any) => fn.active));
-      setLoading(false);
-    });
-  }, [id]);
+    ])
+      .then(([s, f]) => {
+        setServer(s.data);
+        setSelectedFnIds(s.data.functions.map((fn) => fn.id));
+        setAllFunctions(f.data.filter((fn: any) => fn.active));
+        setLoading(false);
+      })
+      .catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetch_(); }, [id]);
 
   const saveFunctions = async () => {
-    await api(`/servers/${id}/functions`, {
-      method: "PUT",
-      body: JSON.stringify({ functionIds: selectedFnIds }),
-    });
-    const res = await api<{ data: ServerDetail }>(`/servers/${id}`);
-    setServer(res.data);
+    setSaving(true);
+    try {
+      await api(`/servers/${id}/functions`, {
+        method: "PUT",
+        body: JSON.stringify({ functionIds: selectedFnIds }),
+      });
+      const res = await api<{ data: ServerDetail }>(`/servers/${id}`);
+      setServer(res.data);
+      toast("Funções salvas");
+    } catch {
+      toast("Erro ao salvar funções", "error");
+    }
+    setSaving(false);
   };
 
   const toggleFn = (fnId: number) => {
     setSelectedFnIds((prev) => prev.includes(fnId) ? prev.filter((x) => x !== fnId) : [...prev, fnId]);
   };
 
-  if (loading) return <p className="text-muted-foreground">Carregando...</p>;
-  if (!server) return <p className="text-destructive">Acólito não encontrado.</p>;
+  if (loading) return <PageLoading />;
+  if (error || !server) return <PageError message="Acólito não encontrado." onRetry={fetch_} />;
 
   return (
     <div>
@@ -77,7 +97,12 @@ export default function AcolitoDetalhePage() {
                 </button>
               ))}
             </div>
-            <button onClick={saveFunctions} className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            <button
+              onClick={saveFunctions}
+              disabled={saving}
+              className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving && <Spinner size={14} />}
               Salvar Funções
             </button>
           </div>

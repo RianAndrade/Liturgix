@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/shared/components/ui/ThemeToggle";
 import {
   LayoutDashboard, Calendar, Users, Church,
   ClipboardList, Clock, Shield, Settings, LogOut, UserCheck,
+  UserCog, FileText,
 } from "lucide-react";
 import type { Role } from "@/shared/types";
 
@@ -28,6 +29,8 @@ const navItems: NavItem[] = [
   { label: "Responsáveis", to: "/responsaveis", icon: <UserCheck size={16} />, minRole: "COORDINATOR" },
   { label: "Coordenação", to: "/coordenacao", icon: <Shield size={16} />, minRole: "COORDINATOR" },
   { label: "Administração", to: "/admin", icon: <Settings size={16} />, minRole: "ADMIN", section: "Admin" },
+  { label: "Usuários", to: "/admin/usuarios", icon: <UserCog size={16} />, minRole: "ADMIN" },
+  { label: "Auditoria", to: "/admin/auditoria", icon: <FileText size={16} />, minRole: "ADMIN" },
 ];
 
 export function Sidebar() {

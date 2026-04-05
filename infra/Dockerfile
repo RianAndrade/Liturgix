@@ -32,7 +32,9 @@ COPY --from=backend-build /app/backend/prisma ./prisma
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=frontend-build /app/frontend/dist ./public
 
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads && chown -R node:node /app
+
+USER node
 
 EXPOSE 3000
 
