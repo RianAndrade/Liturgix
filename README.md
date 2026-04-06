@@ -1,6 +1,10 @@
 # Liturgix
 
-Sistema de geração automática de escalas litúrgicas para acólitos em igrejas.
+Liturgix é um sistema web para organizar escalas litúrgicas de acólitos em paróquias e comunidades católicas.
+
+Na prática, coordenadores de liturgia precisam montar escalas de quem vai servir em cada celebração (missas, adorações, festas etc.), respeitando a disponibilidade de cada acólito, suas funções habilitadas (cerimoniário, turiferário, cruciferário...) e garantindo uma rotação justa. Fazer isso manualmente é trabalhoso e propenso a erros — alguém sempre acaba sobrecarregado ou esquecido.
+
+O Liturgix automatiza esse processo: os acólitos informam sua disponibilidade pelo sistema, o coordenador cadastra as celebrações e seus requisitos, e um algoritmo gera a escala otimizada automaticamente. O resultado pode ser publicado com um link público para que todos consultem.
 
 ## Arquitetura
 
